@@ -123,7 +123,7 @@ myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
   n<-100
   x <- rnorm(n, 10, .2)
   y <- x+rexp(n, 3)
-  span=.5 #is the range of min point - max point within a bin
+  span=.5 # is the percentage of total points in data
   
   weights <- c()
   points <- data.frame(x,y) #Creating a matrix for x and y points
