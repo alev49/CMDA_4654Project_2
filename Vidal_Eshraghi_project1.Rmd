@@ -1,0 +1,214 @@
+---
+title: "CMDA-4654  \n Homework Template"
+subtitle: "Group Exercise 2"
+author: "Alex Vidal and Seth Eshraghi"
+date: "March 16, 2024"
+output:
+  pdf_document:
+    highlight: haddock
+keep_tex: no
+number_sections: no
+html_document:
+  df_print: paged
+geometry: margin = 0.5in
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+editor_options:
+  chunk_output_type: console
+documentclass: article
+urlcolor: blue
+---
+
+<!-- The above is set to automatically compile to a .pdf file.   -->
+
+<!-- It will only succeed if LaTeX is installed. -->
+
+<!-- If you absolutely can't get LaTeX installed and/or working, then you can compile to a .html first,  -->
+
+<!-- by clicking on the arrow button next to knit and selecting Knit to HTML. -->
+
+<!-- You must then print you .html file to a .pdf by using first opening it in a web browser and then printing to a .pdf -->
+
+```{r setup, include=FALSE}
+# This is the setup chunk
+#  Here you can set global options for the entire document
+
+library(knitr) # I recommend doing this here
+
+# Although you can call functions from a library using the following notation
+#  without loading the entire library.
+knitr::opts_chunk$set(echo = TRUE, 
+                      comment = NA, # Required
+                      fig.path = "./figures/",  # Store all figures here in relative path (make the folder first)
+                      fig.align = "center",
+                      fig.width = 7,
+                      fig.height = 7,
+                      message = FALSE, # Turn off load messages
+                      warning = FALSE # Turn off warnings
+                      )
+
+```
+
+\clearpage
+
+```{r include=FALSE}
+# You should not echo this chunk.
+# include=FALSE does more than echo=FALSE, it actually does: echo=FALSE, results='hide', message=FALSE, warning=FALSE, fig.show='hide'
+
+# You should set your working directory at the very beginning of your R Markdown file
+setwd("/Users/alexvidal/Desktop/CMDA_4654/")
+
+```
+
+
+# Part 1
+
+## Function
+```{r}
+# Gets a single x point and finds n closest points to xPt in points along with their corresponding weights
+# Returns list those n closest to xPt points as a list as well as their corresponding weights
+# points is a data frame with columns x and y and N rows so n<N
+minPoint <- function(xPt, points, n){
+  closestX <- c()
+  closestY <- c()
+  weight <- c()
+  minDsits <- sort((abs(xPt-points$x)))[1:n] 
+  for(index in 1:nrow(points)){
+    distBetween <- abs(xPt-points$x[index])
+    if(distBetween  %in% minDsits){
+      closestX <- c(closestX, points$x[index])
+      closestY <- c(closestY, points$y[index])
+      minDsits <- minDsits[-match(distBetween, minDsits)]
+      if(distBetween>=1){
+        weight <- c(weight, 0)
+      }
+      else{
+        weight <- c(weight, (1-distBetween^3)^3)
+      }
+    }
+  }
+  closest <- data.frame(closestX, closestY, weight)
+  return(closest)
+}
+
+
+# Your function will have the following inputs.
+# 
+# * x - a numeric input vector
+# * y - a numeric response
+#
+# Note span and degree are shown with their default values. (Read about this in the description)
+# * degree should be 1 or 2 only
+# * span can be any value in interval (0, 1) non-inclusive.
+#
+# If show.plot = TRUE then you must show a plot of either the final fit
+
+myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
+  
+  #Testing set
+  set.seed(1)
+  n<-100
+  x <- rnorm(n, 10, .2)
+  y <- x+rexp(n, 3)
+  span=.5 #is the range of min point - max point within a bin
+  
+  weights <- c()
+  points <- data.frame(x,y) #Creating a matrix for x and y points
+  # Finds the weights of every x
+  for(point in 1:nrow(points)){
+    for(p in 1:nrow(points)*span) {
+      if(abs(points[point]-points[p])<=span){ 
+        spanPts <- c(p)
+        u <- abs(dist(points[point], points[p])) # Storing distance between each point and important point
+        if(u<=1){
+          weights <- c(weights, abs(1-u^3)^3)
+        }
+        else{
+          weights <- c(weights, 0)
+        }
+      }
+    }
+  }
+  
+  return(list of objects seen below) 
+}
+
+# Your function should return a named list containing the following:
+# span: proportion of data used in each window (controls the bandwidth)
+# degree: degree of polynomial
+# N_total: total number of points in the data set
+# Win_total: total number of windows
+# n_points: number of points in each window in a vector
+# SSE: Error Sum of Squares (Tells us how good of a fit we had).
+# loessplot: An object containing the ggplot so that we can see the plot later. 
+#  We want this even if show.plot = FALSE
+#  Note: you are NOT allowed to simply use stat_smooth() or geom_smooth() to have it automatically do LOESS.
+#  You should use geom_line() or similar to plot your final the LOESS curve.
+
+# Make sure you can access the objects properly using the $ notation.
+```
+
+## Problem 1
+
+## Problem 2
+
+
+
+
+# Part 2
+
+## Function
+```{r}
+# Your function will have the following inputs similar to what you would find with the
+#  knn() function
+#
+# * train - matrix or data frame of training set cases
+# * test - matrix or data frame of test set cases.  
+#     (A vector will be interpreted as a row vector for a single case.)
+# * y_train - Either a numeric vector, or factor vector for the responses in the training set
+# * y_test - Either a numeric vector, or factor vector for the responses in the testing set
+# * k - number of neighbors considered, the default value is 3
+#
+# If weighted = TRUE, then your function must used the distance weighted kNN as described above,
+#  otherwise it should do the default knn method.
+
+
+mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
+
+  # Your code goes here
+
+  return(list of objects seen below)
+
+}
+
+# If you are doing classification, then your function must return:
+#  * A factor vector (yhat) for the predicted categories for the testing data
+#  * The accuracy of the classification
+#  * The error rate = 1 - accuracy
+#  * A confusion matrix
+#  * The value of k used
+
+# If you are doing regression, then your function must return:
+#  * A numeric vector (yhat) for the predicted responses for the testing data
+#  * The residual vector
+#  * The SSE
+#  * The value of k used
+```
+
+## Problem 3
+
+
+## Problem 4
