@@ -115,10 +115,12 @@ minPoint <- function(xPt, points, n){
   closest <- data.frame(closestX, closestY, weight)
   return(closest)
 }
+
+
+#Test example to see if the weights and coefficients match
 testFit <- minPoint(10, testData, 7)
-testModel <- lm(closestY~1, data = testFit,weights = testFit$weight)
+testModel <- lm(closestY~closestX, data = testFit,weights = testFit$weight)
 testModel$coefficients
-testModel$coefficients[1]+10
 # Your function will have the following inputs.
 # 
 # * x - a numeric input vector
@@ -140,13 +142,14 @@ myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
   span=.5 
   
   #N <- nrow(x)
-  weights <- c()
   points <- data.frame(x,y) #Creating a matrix for x and y points
-  # Finds the weights of every x
+  regValues <- c()
   for(index in 1:N{
     # The subset of points that also include weights for each point
     pointData <- minPoint(xPt = points[index], points, span*N)
     pointModel <- lm(closestY~closestX, data = pointData, weights = pointData$weight)
+    # The regression values or the fitted values at the points according to the weighted regression
+    regValues <- c(regValues, pointModel$coefficients[1]+pointModel$coefficients[2]*points[index])
   }
   
   return(list of objects seen below) 
