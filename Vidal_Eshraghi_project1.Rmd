@@ -76,6 +76,15 @@ setwd("/Users/alexvidal/Desktop/CMDA_4654/")
 
 # Part 1
 
+Testing loess
+```{r}
+#data from https://www.itl.nist.gov/div898/handbook/pmd/section1/dep/dep144.htm 
+testData <- read.csv("exData.csv", header = FALSE,col.names = c("x", "y")) 
+model <- loess(y~x,data=testData, span = 1/3,degree = 1,family = "symmetric")
+model$fitted
+```
+
+
 ## Function
 ```{r}
 # Gets a single x point and finds n closest points to xPt in points along with their corresponding weights
@@ -85,13 +94,16 @@ minPoint <- function(xPt, points, n){
   closestX <- c()
   closestY <- c()
   weight <- c()
-  minDsits <- sort((abs(xPt-points$x)))[1:n] 
+  minDists <- sort((abs(xPt-points$x)))[1:n] 
+  maxDist <- max(minDists)
+  minDists <- minDists/maxDist
+  print(minDists)
   for(index in 1:nrow(points)){
-    distBetween <- abs(xPt-points$x[index])
-    if(distBetween  %in% minDsits){
+    distBetween <- abs(xPt-points$x[index])/maxDist
+    if(distBetween  %in% minDists){
       closestX <- c(closestX, points$x[index])
       closestY <- c(closestY, points$y[index])
-      minDsits <- minDsits[-match(distBetween, minDsits)]
+      minDists <- minDists[-match(distBetween, minDists)]
       if(distBetween>=1){
         weight <- c(weight, 0)
       }
@@ -103,8 +115,10 @@ minPoint <- function(xPt, points, n){
   closest <- data.frame(closestX, closestY, weight)
   return(closest)
 }
-
-
+testFit <- minPoint(10, testData, 7)
+testModel <- lm(closestY~1, data = testFit,weights = testFit$weight)
+testModel$coefficients
+testModel$coefficients[1]+10
 # Your function will have the following inputs.
 # 
 # * x - a numeric input vector
@@ -120,27 +134,19 @@ myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
   
   #Testing set
   set.seed(1)
-  n<-100
+  N<-100
   x <- rnorm(n, 10, .2)
   y <- x+rexp(n, 3)
-  span=.5 # is the percentage of total points in data
+  span=.5 
   
+  #N <- nrow(x)
   weights <- c()
   points <- data.frame(x,y) #Creating a matrix for x and y points
   # Finds the weights of every x
-  for(point in 1:nrow(points)){
-    for(p in 1:nrow(points)*span) {
-      if(abs(points[point]-points[p])<=span){ 
-        spanPts <- c(p)
-        u <- abs(dist(points[point], points[p])) # Storing distance between each point and important point
-        if(u<=1){
-          weights <- c(weights, abs(1-u^3)^3)
-        }
-        else{
-          weights <- c(weights, 0)
-        }
-      }
-    }
+  for(index in 1:N{
+    # The subset of points that also include weights for each point
+    pointData <- minPoint(xPt = points[index], points, span*N)
+    pointModel <- lm(closestY~closestX, data = pointData, weights = pointData$weight)
   }
   
   return(list of objects seen below) 
@@ -160,6 +166,7 @@ myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
 
 # Make sure you can access the objects properly using the $ notation.
 ```
+
 
 ## Problem 1
 
