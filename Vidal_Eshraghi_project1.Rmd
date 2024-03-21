@@ -89,29 +89,48 @@ model$fitted
 ```{r}
 library(ggplot2)
 # Gets a single x point and finds n closest points to xPt in points along with their corresponding weights
-# Returns a data frame of those n closest to xPt points with columns x, y and wieght 
+# Returns a data frame of those n closest to xPt points with columns x, y and weight 
 # points is a data frame with columns x and y and N rows so n<N
 minPoint <- function(xPt, points, n){
   closestX <- c()
   closestY <- c()
   weight <- c()
+  
+  #Gets the first n smallest distances
   minDists <- sort((abs(xPt-points$x)))[1:n] 
+  
+  #Stores max dist
   maxDist <- max(minDists)
+  
+  #Standardizes the smallest distances so largest dist is now 1
   minDists <- minDists/maxDist
+  
+  # Goes through all the points and compares their distances
+  # to see if it is in the smallest distances list above
   for(index in 1:nrow(points)){
     distBetween <- abs(xPt-points$x[index])/maxDist
     if(distBetween  %in% minDists){
       closestX <- c(closestX, points$x[index])
       closestY <- c(closestY, points$y[index])
+      
+      #Removes smallest distance from our list
       minDists <- minDists[-match(distBetween, minDists)]
+      
+      # Basically largest distance point gets wieght of 0
       if(distBetween>=1){
         weight <- c(weight, 0)
       }
+      
+      #Otherwise plug distance in the weight formula below
+      # Using the tricube wight function for this 
       else{
         weight <- c(weight, (1-distBetween^3)^3)
       }
     }
   }
+  
+  #Creates the final data frame with the top n closest points with
+  #corresponding weights
   closest <- data.frame(closestX, closestY, weight)
   return(closest)
 }
@@ -129,36 +148,75 @@ minPoint <- function(xPt, points, n){
 # If show.plot = TRUE then you must show a plot of either the final fit
 
 myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
+  
+  #Total number of data points
   N <- length(x)
-  points <- data.frame(x,y) #Creating a matrix for x and y points
+  
+  #Creating a data frame for x and y points
+  points <- data.frame(x,y) 
+  
+  # Checks if span is within usable parameters
+  if(span>=1 | span<=0){
+    return("Span needs to be within 0 and 1 exclusive")
+  }
+  
+  #True loess fit according to built in R function
+  truFitVals <- predict(loess(y~x, data=points, span = span, degree = degree))
+  truData <- data.frame(x=x, y=truFitVals)
+  
+  # The regression values
   regValues <- c()
+  
+  # Loops through the data set using its index and calculates each 
+  # points n=(span*N) closest points and those points weights
+  # Plugs that new data into linear model with corresponding 
+  # degrees and weights and stores their predicted values at the same point. 
   for(index in 1:N){
-    # The subset of points that also include weights for each point
+    
+    # Closest points data obtained form our function above
     pointData <- minPoint(points$x[index], points, round(span*N))
+    
+    # Fitting data to linear model with degree 1 and stores the predicted value
+    # in regValues
     if(degree==1){
       pointModel <- lm(closestY~closestX, data = pointData, weights = pointData$weight)
-      # The regression values or the fitted values at the points according to the weighted regression
       regValues <- c(regValues, pointModel$coefficients[1]+pointModel$coefficients[2]*points$x[index])
     }
+    
+    # Same but with degree 2
     else if(degree==2){
+      
       #Creating the 2nd parameter for our 2 degree polynomial
       pointData$closestXSquared <- pointData$closestX^2
+      
       pointModel <- lm(closestY~closestX+closestXSquared, data = pointData, weights = pointData$weight)
-      # Storing the fitted value in regValues
-      regValues <- c(regValues, pointModel$coefficients[1]+pointModel$coefficients[2]*points$x[index]+pointModel$coefficients[3]*(points$x[index])^2)
+      regValues <- c(regValues, pointModel$coefficients[1]+pointModel$coefficients[2]*points$x[index]+
+                       pointModel$coefficients[3]*(points$x[index])^2)
     }
+    
+    #Catches non 1 and 2 degree values
     else{
-      print("Error: Degree too large")
+      return("Error: Degree too large")
     }
   }
+  
+  # Calculates Sum of Squares Error
   SSE <- sum((points$y-regValues)^2)
+  
+  # Our new fitted data based on 
   fittedData <- data.frame(x=points$x, y=regValues)
+  # The plot that shows my LOESS function and R built in LOESS function
   thePlot <- ggplot()+
     geom_point(data = points,aes(x=x, y=y))+
-    geom_line(data = fittedData, aes(x=x, y=y))+
+    geom_line(data = fittedData, aes(x=x, y=y, colour="My LOESS"))+
+    geom_line(data = truData,aes(x=x,y=y, colour="R LOESS"))+
     labs(title=paste(" LOESS Plot with", degree, "Degree Polynomial", "\n", "with Span:", span, sep = " "),
-        x ="x variable", y = "y variable")
+        x ="x variable", y = "y variable", colour="Legend")
+  
+  # Compiles all the results in list
   result <- list(Span=span, degree=degree, N_total=N, SSE=SSE, loessplot=thePlot)
+  
+  # Plots the plot if true otherwise returns our result
   if(show.plot){
     plot(thePlot)
   }
@@ -182,19 +240,8 @@ myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
 
 ## Problem 1
 ```{r}
-bruh <- myloess(testData$x, testData$y, span = .333, degree = 2, show.plot = FALSE)
-bruh$SSE
-fitty <- loess(testData$y~testData$x, span = .333, degree = 2)
-
 load("ozone.RData")
 head(ozone)
-
-wotty <- ggplot(data = ozone, aes(x=radiation, y=temperature))+
-  geom_line()+
-  geom_point(aes(x=radiation, y=temperature))
-data.frame(bruh = 1,theplot=test, dawg=wotty)
-test <- list(a=1,b="a",c=2.3,d=5)
-wotty
 ```
 
 ### 1.
@@ -289,10 +336,25 @@ Based on visuals the best looking fit for the data looks to be in the degree 2 p
 # If weighted = TRUE, then your function must used the distance weighted kNN as described above,
 #  otherwise it should do the default knn method.
 
+# Specific function that finds the distances between the 
+# k neighbors from the specifc vector (newPt) data point
+# from the data frame of points
+# Will return a data frame of the k distances from newPt
+findNeighborDist <- function(newPt, points, k){
+  
+  
+  
+}
+
+
 
 mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
 
-  # Your code goes here
+  
+  
+  resultClass <- list(Predicted_Responses=yhat, accuracy=acc, Error_Rate=1-acc, Confusion_Matrix=confMat, Value_of_k=k)
+  
+  resultReg <- list(Predicted_Responses=yhat, Residual_Vector=resid, SSE=sse, Value_of_k=k)
 
   return(list of objects seen below)
 
