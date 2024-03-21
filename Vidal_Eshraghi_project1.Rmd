@@ -156,11 +156,11 @@ myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
   thePlot <- ggplot()+
     geom_point(data = points,aes(x=x, y=y))+
     geom_line(data = fittedData, aes(x=x, y=y))+
-    labs(title=paste("LOESS Plot with", degree, "Degree Polynomial", sep = " "),
+    labs(title=paste(" LOESS Plot with", degree, "Degree Polynomial", "\n", "with Span:", span, sep = " "),
         x ="x variable", y = "y variable")
   result <- list(Span=span, degree=degree, N_total=N, SSE=SSE, loessplot=thePlot)
   if(show.plot){
-    thePlot
+    plot(thePlot)
   }
   
   return(result) 
@@ -213,9 +213,9 @@ I would say that based on the adjusted R squared the sweet spot for the model to
 SSETable <- matrix(1, ncol=11, nrow = 2,byrow=TRUE)
 plotTable <- matrix(1, ncol=11, nrow = 2,byrow=TRUE)
 for(j in 1:2){
-   index <- 1
+  index <- 1
   for(i in seq(.25,.75, by=.05)){
-    fit <- myloess(ozone$ozone, ozone$temperature, span=i, degree = j)
+    fit <- myloess(ozone$ozone, ozone$temperature, span=i, degree = j, show.plot = FALSE)
     SSETable[j, index] <- fit$SSE
     index <- index+1
   }
@@ -227,23 +227,50 @@ print("Sum of Squares Error Table")
 print(SSETable)
 
 print("Best Fitted Plots by Polynomial Degree")
+spans <- seq(.25,.75, by=.05)
 for(i in 1:2){
   for (j in 1:3){
-    seq(.25,.75, by=.05)
-    fit <- myloess(ozone$ozone, ozone$temperature, span=i, degree = i)
+    fit <- myloess(ozone$ozone, ozone$temperature, span=spans[j], degree = i)
   }
 }
-bestfitD1 <- myloess(ozone$ozone, ozone$temperature, span=.25, degree = 1)
 ```
 
-
+All the best plots for both degree 1 and degree 2 had the lowest spans since they were probably over fitting in some areas especially as seen in the degree 2 span .25 plot. In the beginning the line varies greatly and is not as smooth as I would like to be used in modeling. Degree 2 span of .35 actually looks much smoother and if you look at the SSE Table it is not that much difference in SSE compared to .3. For degree 1 even with span of .25 it's SSE is still not lower than degree 2 span of .35 but looks smoother than it. Overall degree 2 span of .25 and .3 look very over fitting and even span of .35 does a bit while degree 1 span of .25 is slight over fitting with the other spans looking pretty smooth. 
 
 ## Problem 2
+```{r}
+library(MASS)
+data("mcycle")
+```
 
+### 1.
+```{r}
+SSETable <- matrix(1, ncol=11, nrow = 2,byrow=TRUE)
+plotTable <- matrix(1, ncol=11, nrow = 2,byrow=TRUE)
+for(j in 1:2){
+  index <- 1
+  for(i in seq(.25,.75, by=.05)){
+    fit <- myloess(mcycle$times, mcycle$accel, span=i, degree = j, show.plot = FALSE)
+    SSETable[j, index] <- fit$SSE
+    index <- index+1
+  }
+}
 
+colnames(SSETable) <- c(seq(.25,.75, by=.05))
+rownames(SSETable) <- c(1,2)
 
+print("Sum of Squares Error Table")
+print(SSETable)
 
+bestSpans <- c(.25,.3,.35)
+for(i in 1:2){
+  for (j in 1:3){
+    fit <- myloess(mcycle$times, mcycle$accel, span=bestSpans[j], degree = i)
+  }
+}
+```
 
+Based on visuals the best looking fit for the data looks to be in the degree 2 polynomial fit as degree 1 fit are just too smooth and dampened so they don't look that well fit. For teh degree 2 span the SSE for .25 says it is the best but .3 and .35 look the smoothest with some decrease in SSE. 
 
 # Part 2
 
