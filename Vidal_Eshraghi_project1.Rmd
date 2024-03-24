@@ -403,8 +403,6 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
     
     #Finds the k nearest neighbor's indices
     neighbors <- findNeighbors(test[point, ], train, k)
-    #print(point)
-    #print(neighbors)
   
     #Goes through using the weighted method to figure out classification for each point
     if(weighted & !regression){
@@ -418,11 +416,9 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
       colnames(totalWeights) <- c("Total_Weight", "Classification")
       
       for(c in uniqueClass){
-       # print(c)
         total <- sum(neighbors$weight[neighbors$class==c])
         totalWeights[nrow(totalWeights)+1, ] <- data.frame(Total_Weight=total, Classification=c)
       }
-      #print(totalWeights)
       classified <- c(classified,totalWeights$Classification[totalWeights$Total_Weight==max(totalWeights$Total_Weight)])
 
       
@@ -433,8 +429,9 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
       classified <- c(classified, yhat)
     }
     else{
+      neighbors$class <- y_train[neighbors$index]
       #Finds out largest occurrence of specific classification and stores it
-      classified <- names(table(neighborClass))[which.max(table(neighborClass))]
+      classified <- c(classified, names(table(neighbors$class))[which.max(table(neighbors$class))])
     }
     
 
@@ -493,7 +490,7 @@ head(Auto_new)
 dt <- (sample(nrow(Auto_new), nrow(Auto_new)*.7))
 model <-mknn(train =Auto_new[dt, -8] , test = Auto_new[-dt, -8], k = 3, cl =Auto_new[dt, 8])
 
-mykNN(train=Auto_new[dt, -8], test = Auto_new[-dt, -8], y_test = Auto_new[-dt, 8], y_train = Auto_new[dt, 8], k = 5)
+mykNN(train=Auto_new[dt, -8], test = Auto_new[-dt, -8], y_test = Auto_new[-dt, 8], y_train = Auto_new[dt, 8], k = 5, weighted = FALSE)
 
 b <- c("b","b","b","a","a","b")
 s <- c("b","b","a","a","b","b")
