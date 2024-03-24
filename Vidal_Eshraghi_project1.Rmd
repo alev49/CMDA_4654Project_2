@@ -323,6 +323,7 @@ Based on visuals the best looking fit for the data looks to be in the degree 2 p
 
 ## Function
 ```{r}
+library(caret)
 # Your function will have the following inputs similar to what you would find with the
 #  knn() function
 #
@@ -336,27 +337,126 @@ Based on visuals the best looking fit for the data looks to be in the degree 2 p
 # If weighted = TRUE, then your function must used the distance weighted kNN as described above,
 #  otherwise it should do the default knn method.
 
-# Specific function that finds the distances between the 
-# k neighbors from the specifc vector (newPt) data point
-# from the data frame of points
-# Will return a data frame of the k distances from newPt
-findNeighborDist <- function(newPt, points, k){
-  
-  
-  
-}
+# Specific function that finds the k nearest neighbors 
+# from the newPt and the surrounding other points
+# Will return a  sorted  data frame of smallest to largest weight
+# and the index of k nearest points
+findNeighbors <- function(newPt, points, k){
 
+  neighbors <- data.frame(matrix(ncol = 2, nrow = k))
+  
+  colnames(neighbors) <- c("index", "weight")
+  
+  #Creates empty data frame with 2 columns
+  distances <- data.frame(matrix(ncol=2,nrow=0))
+  colnames(distances) <- c("Distance", "Index")
+  
+  #Loops through all of the points and calculates the euclidean distance
+  #for each point to the newPt. Stores it in the data frame
+  for(p in 1:nrow(points)){
+    
+    #Adds new row to data frame and stores the value in it.
+    d <- dist(x = rbind(points[p, ], newPt), method="euclidean")
+    distances[nrow(distances)+1,] <- c(Distance=d, Index=p)
+    
+  }
+  #Stores the first k indices and weights
+  #sorted smallest to largest.
+  neighbors$index <- distances$Index[order(distances$Distance)][1:k]
+  w <-c()
+  #Standardize the weights so even if distance is 
+  for(i in sort(distances$Distance)[1:k]){ 
+    if(i>0){
+      w <- c(w, (1/i))
+    }
+    else{
+      w <- c(w, 1)
+    }
+  }
+  neighbors$weight <- w
+  return(neighbors)
+}
+findNeighbors(Auto_new[41,-8], Auto_new[,-8], 7)
 
 
 mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
+  
+  #Sets if we have to perform a regression or not
+  regression <- FALSE
+  
+  #Checks if testing and training responses are numeric
+  if(is.numeric(y_train) | is.numeric(y_test)){
+    regression <- TRUE
+  }
+  else{
+    y_train <- as.factor(y_train)
+    y_test <- as.factor(y_test)
+  }
+  classified <- c()
+  
+  # Loop through all the training points and find each respective
+  # k neighbors and classify the point based on highest number of 
+  # classifications within the k neighbors and store it 
+  for(point in 1:nrow(test)){
+    #Holds the classified predictions
+    
+    
+    #Finds the k nearest neighbor's indices
+    neighbors <- findNeighbors(test[point, ], train, k)
+    #print(point)
+    #print(neighbors)
+  
+    #Goes through using the weighted method to figure out classification for each point
+    if(weighted & !regression){
+     
+      #Adds new column the classification column to the neighbors data frame
+      neighbors$class <- y_train[neighbors$index]
+      
+      uniqueClass <- unique(neighbors$class)
+      totalWeights <- c()
+      totalWeights <- data.frame(matrix(ncol = 2, nrow = 0))
+      colnames(totalWeights) <- c("Total_Weight", "Classification")
+      
+      for(c in uniqueClass){
+       # print(c)
+        total <- sum(neighbors$weight[neighbors$class==c])
+        totalWeights[nrow(totalWeights)+1, ] <- data.frame(Total_Weight=total, Classification=c)
+      }
+      #print(totalWeights)
+      classified <- c(classified,totalWeights$Classification[totalWeights$Total_Weight==max(totalWeights$Total_Weight)])
 
-  
-  
-  resultClass <- list(Predicted_Responses=yhat, accuracy=acc, Error_Rate=1-acc, Confusion_Matrix=confMat, Value_of_k=k)
-  
-  resultReg <- list(Predicted_Responses=yhat, Residual_Vector=resid, SSE=sse, Value_of_k=k)
+      
+    } 
+    else if(weighted & regression){
+      neighbors$c <- neighbors$weight/sum(neighbors$weight)
+      yhat <- sum(neighbors$c*point)
+      classified <- c(classified, yhat)
+    }
+    else{
+      #Finds out largest occurrence of specific classification and stores it
+      classified <- names(table(neighborClass))[which.max(table(neighborClass))]
+    }
+    
 
-  return(list of objects seen below)
+  }
+  
+  if(!regression){
+    # Creates confusion Matrix that shows for the predicted classifications versus our 
+    # correct test set
+    factors <- unique(y_test)
+    y_test <- factor(y_test,levels = factors)
+    classified <-factor(classified, levels = factors)
+    confMat <- confusionMatrix(data = classified, reference = y_test)
+    acc <- confMat$overall[1]
+    resultClass <- list(Predicted_Responses=classified, accuracy=acc, Error_Rate=1-acc, Confusion_Matrix=confMat$table, Value_of_k=k)
+    return(resultClass)
+  }
+  else{
+    resid <- classified-y_test
+    sse <- sum(resid^2)
+    resultReg <- list(Predicted_Responses=classified, Residual_Vector=resid, SSE=sse, Value_of_k=k)
+    return(resultReg)
+  }
 
 }
 
@@ -375,6 +475,36 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
 ```
 
 ## Problem 3
+```{r}
+# Some pre-processing
+library(ISLR)
+# Remove the name of the car model and change the origin to categorical with actual name
+Auto_new <- Auto[, -9]
+# Lookup table
+newOrigin <- c("USA", "European", "Japanese")
+Auto_new$origin <- factor(newOrigin[Auto_new$origin], newOrigin)
+
+# Look at the first 6 observations to see the final version
+head(Auto_new)
+```
+
+### 1. 
+```{r}
+dt <- (sample(nrow(Auto_new), nrow(Auto_new)*.7))
+model <-mknn(train =Auto_new[dt, -8] , test = Auto_new[-dt, -8], k = 3, cl =Auto_new[dt, 8])
+
+mykNN(train=Auto_new[dt, -8], test = Auto_new[-dt, -8], y_test = Auto_new[-dt, 8], y_train = Auto_new[dt, 8], k = 5)
+
+b <- c("b","b","b","a","a","b")
+s <- c("b","b","a","a","b","b")
+matty <- confusionMatrix(data = as.factor(b), reference = as.factor(s))
+table(b,s)
+names(table(b))[which.max(table(b))]
+max(table(b),)
+max(table(b,deparse.level = 0))
+(length((unique(b) == b)[(unique(b) == b) == TRUE]))
+```
+
 
 
 ## Problem 4
