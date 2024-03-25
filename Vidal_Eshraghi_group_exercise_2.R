@@ -13,8 +13,8 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
         classes.near = unique(neighbors.y)
         # computes the predicted class for the test point corresponding to the
         # current iteration of this for loop
+        max = -1
         if (weighted) {
-            max = -1
             for (j in classes.near) {
                 # applies weight function
                 total = sum(as.numeric(neighbors.y == j) / neighbors.dist[neighbors.y == j])
@@ -24,7 +24,6 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
                 }
             }
         } else {
-            max = -1
             for (j in classes.near) {
                 total = sum(neighbors.y == j)
                 if (total > max) {
