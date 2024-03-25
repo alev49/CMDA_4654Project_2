@@ -350,10 +350,14 @@ findNeighbors <- function(newPt, points, k){
   #Creates empty data frame with 2 columns
   distances <- data.frame(matrix(ncol=2,nrow=0))
   colnames(distances) <- c("Distance", "Index")
+  n<-t(points)
+  if(is.list(points)){
+    n <- t(pionts)
+  }
   
   #Loops through all of the points and calculates the euclidean distance
   #for each point to the newPt. Stores it in the data frame
-  for(p in 1:nrow(points)){
+  for(p in 1:n){
     
     #Adds new row to data frame and stores the value in it.
     d <- dist(x = rbind(points[p, ], newPt), method="euclidean")
@@ -376,7 +380,55 @@ findNeighbors <- function(newPt, points, k){
   neighbors$weight <- w
   return(neighbors)
 }
-findNeighbors(Auto_new[41,-8], Auto_new[,-8], 7)
+
+kNNreg = function(train, test, y_train, y_test, k, weighted) {
+    yhat = c()
+    n<-length(test)
+    if(is.list(test)){
+      n<-nrow(test)
+    }
+    for (i in 1:n) {
+        if(!is.list(test)){
+          diff = t(train) - test[i]
+        }
+        else{
+          diff = t(train) - test[i, ]
+        }
+        #print(diff)
+        dist_sq = diag(t(diff) %*% diff) # vector of squared distances
+        order = order(dist_sq)
+        #print(order)
+
+        # picks the x and y from the training set of the nearest k data points
+        neighbors.y = y_train[order][1:k]
+        #print(neighbors.y)
+        
+        neighbors.dist = sqrt(dist_sq[order][1:k])
+        #print(dist_sq[order][1:k])
+        length = length(neighbors.dist[neighbors.dist == 0])
+        neighbors.dist[neighbors.dist == 0] = rep(min(neighbors.dist[neighbors.dist != 0], length))
+
+        # neighbors.dist[neighbors.dist == 0] = 0.0001
+        neightbors.dist = neighbors.dist * max(neighbors.dist)
+
+        if (weighted) {
+            yhat = c(yhat, sum(neighbors.y / neighbors.dist, na.rm = T) * sum(neighbors.dist))
+        } else {
+            yhat = c(yhat, mean(neighbors.y))
+        }
+
+        if (weighted) {
+            yhat = c(yhat, sum(neighbors.y / neighbors.dist) * sum(neighbors.dist))
+        } else {
+            yhat = c(yhat, mean(neighbors.y))
+        }
+    }
+
+    residuals = y_test - yhat
+    sse = as.numeric(t(residuals) %*% residuals)
+
+    return(list(Predicted_Responses = yhat, Residual_Vector= residuals, SSE = sse, Value_of_k = k))
+}
 
 
 mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
@@ -387,17 +439,23 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
   #Checks if testing and training responses are numeric
   if(is.numeric(y_train) | is.numeric(y_test)){
     regression <- TRUE
+    return(kNNreg(train, test, y_train, y_test, k, weighted))
   }
   else{
     y_train <- as.factor(y_train)
     y_test <- as.factor(y_test)
   }
+  
+  n <- nrow(test)
   classified <- c()
+  if(!is.list(test)){
+    n <- t(test)
+  }
   
   # Loop through all the training points and find each respective
   # k neighbors and classify the point based on highest number of 
   # classifications within the k neighbors and store it 
-  for(point in 1:nrow(test)){
+  for(point in 1:n){
     #Holds the classified predictions
     
     
@@ -423,12 +481,7 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
 
       
     } 
-    else if(weighted & regression){
-      neighbors$c <- neighbors$weight/sum(neighbors$weight)
-      yhat <- sum(neighbors$c*point)
-      classified <- c(classified, yhat)
-    }
-    else{
+    else if (!weighted & !regression){
       neighbors$class <- y_train[neighbors$index]
       #Finds out largest occurrence of specific classification and stores it
       classified <- c(classified, names(table(neighbors$class))[which.max(table(neighbors$class))])
@@ -449,10 +502,11 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
     return(resultClass)
   }
   else{
-    resid <- classified-y_test
-    sse <- sum(resid^2)
-    resultReg <- list(Predicted_Responses=classified, Residual_Vector=resid, SSE=sse, Value_of_k=k)
-    return(resultReg)
+    
+    # resid <- classified-y_test
+    # sse <- sum(resid^2)
+    # resultReg <- list(Predicted_Responses=classified, Residual_Vector=resid, SSE=sse, Value_of_k=k)
+    # return(resultReg)
   }
 
 }
@@ -487,21 +541,85 @@ head(Auto_new)
 
 ### 1. 
 ```{r}
+set.seed(21)
 dt <- (sample(nrow(Auto_new), nrow(Auto_new)*.7))
-model <-mknn(train =Auto_new[dt, -8] , test = Auto_new[-dt, -8], k = 3, cl =Auto_new[dt, 8])
+trainData <- Auto_new[dt, -8]
+testData <- Auto_new[-dt, -8]
+y_test <- Auto_new[-dt, 8]
+y_train <- Auto_new[dt, 8]
+```
 
-mykNN(train=Auto_new[dt, -8], test = Auto_new[-dt, -8], y_test = Auto_new[-dt, 8], y_train = Auto_new[dt, 8], k = 5, weighted = FALSE)
+### 2. 
+```{r}
+kNNs <-c()
+for(k in seq(2,20)){
+  kNNs <- c(kNNs, mykNN(train=trainData, test = testData, y_test = y_test, y_train = y_train, k = k, weighted = FALSE))
 
-b <- c("b","b","b","a","a","b")
-s <- c("b","b","a","a","b","b")
-matty <- confusionMatrix(data = as.factor(b), reference = as.factor(s))
-table(b,s)
-names(table(b))[which.max(table(b))]
-max(table(b),)
-max(table(b,deparse.level = 0))
-(length((unique(b) == b)[(unique(b) == b) == TRUE]))
+}
+accuracy <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(accuracy) <- c("K_Value", "Accuracy")
+for(i in seq(2,length(kNNs),5)){
+  print(i)
+  accuracy[nrow(accuracy)+1, ] <- c(kNNs[i+3],kNNs[i])
+}
+```
+
+### 3. 
+```{r}
+knitr::kable(accuracy)
+```
+
+### 4. 
+```{r}
+ggplot(data = accuracy,aes(x=K_Value, y= Accuracy))+
+  geom_line()+
+  labs(title=("Plot of k Vlaues vs Accuracy Regular kNN Method"))
+```
+Best k value is probably k=6
+
+### 5.
+```{r}
+kNNs[4*6]
+```
+
+```{r}
+knn5Reg <- mykNN(train=trainData$mpg, test = testData$mpg, y_test = testData$weight, y_train = trainData$weight, k = 5, weighted = FALSE)
+knn10Reg <- mykNN(train=trainData$mpg, test = testData$mpg, y_test = testData$weight, y_train = trainData$weight, k = 10, weighted = FALSE)
+
+k5data <- data.frame(cbind(knn5Reg$Predicted_Responses, testData$mpg, testData$weight))
+ggplot(data = k5data)+
+  geom_point(aes(x=X2, y=X1),alpha=.5, colour='red')+
+  geom_point(aes(x=X2, y=X3), colour='blue', shape=5)+
+  labs(title=("Plot for k=5 value \nmpg vs. weight"))
+
+k10data <- data.frame(cbind(knn10Reg$Predicted_Responses, testData$mpg, testData$weight))
+ggplot(data = k10data)+
+  geom_point(aes(x=X2, y=X1),alpha=.5, colour='red')+
+  geom_point(aes(x=X2, y=X3), colour='blue', shape=5)+
+  labs(title=("Plot for k=10 value \nmpg vs. weight"))
+```
+
+
+## Problem 4
+```{r}
+load("ozone.RData")
+head(ozone)
+dt <- (sample(nrow(ozone), nrow(ozone)*0.631))
+trainData <- ozone[dt, -8]
+testData <- ozone[-dt, -8]
+y_test <- ozone[-dt, 8]
+y_train <- ozone[dt, 8]
+```
+
+### Part a.
+```{r}
+kNNs <-c()
+kvalues=c(1,3,5,10,20)
+for(k in kvalues){
+  kNNs <- c(kNNs, mykNN(train=trainData, test = testData, y_test = y_test, y_train = y_train, k = k, weighted = TRUE))
+}
 ```
 
 
 
-## Problem 4
+
