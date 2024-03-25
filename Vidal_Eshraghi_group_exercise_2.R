@@ -67,9 +67,21 @@ kNNreg = function(train, test, y_train, y_test, k, weighted) {
         # picks the x and y from the training set of the nearest k data points
         neighbors.y = y_train[order][1:k]
         neighbors.dist = sqrt(dist_sq[order][1:k])
+        # neighbors.dist[neighbors.dist == 0] = min(neighbors.dist[neighbors.dist != 0])
+        neighbors.w = c()
+        for (i in 1:length(neighbors.dist)) {
+            if (neighbors.dist[i] > 0) {
+                neighbors.w = c(neighbors.w, 1 / neighbors.dist[i])
+            } else {
+                neighbors.w = c(neighbors.w, 1 / min(neighbors.dist[neighbors.dist != 0]))
+            }
+        }
+
+        # neighbors.dist[neighbors.dist == 0] = 0.0001
+        neightbors.dist = neighbors.dist * max(neighbors.dist)
 
         if (weighted) {
-            yhat = c(yhat, sum(neighbors.y / neighbors.dist) * sum(neighbors.dist))
+            yhat = c(yhat, sum(neighbors.y / neighbors.dist, na.rm = T) * sum(neighbors.dist))
         } else {
             yhat = c(yhat, mean(neighbors.y))
         }
