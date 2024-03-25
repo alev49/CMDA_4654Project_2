@@ -75,7 +75,7 @@ kNNreg = function(train, test, y_train, y_test, k, weighted) {
         }
     }
 
-    residuals = ytest - yhat
+    residuals = y_test - yhat
     sse = as.numeric(t(residuals) %*% residuals)
 
     return(list('yhat' = yhat, 'residuals' = residuals, 'SSE' = sse, 'k' = k))
