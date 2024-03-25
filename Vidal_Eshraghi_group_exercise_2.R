@@ -3,7 +3,7 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
     n = nrow(test) # number of test points
     for (i in 1:n) {
         diff = t(train) - test[i, ]
-        dist_sq = diag(diff %*% t(diff)) # vector of squared distances
+        dist_sq = diag(t(diff) %*% diff) # vector of squared distances
         order = order(dist_sq)
 
         # picks the x and y from the training set of the nearest k data points
@@ -11,25 +11,25 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
         neighbors.dist = sqrt(dist_sq[order][1:k])
 
         classes.near = unique(neighbors.y)
+        # computes the predicted class for the test point corresponding to the
+        # current iteration of this for loop
         if (weighted) {
             max = -1
-            for (i in classes.near) {
+            for (j in classes.near) {
                 # applies weight function
-                print(length(neighbors.dist[neighbors.y == i]))
-                print(length(neighbors.y == i))
-                total = sum(as.numeric(neighbors.y == i) / neighbors.dist[neighbors.y == i])
+                total = sum(as.numeric(neighbors.y == j) / neighbors.dist[neighbors.y == j])
                 if (total > max) {
                     max = total
-                    class = i
+                    class = j
                 }
             }
         } else {
             max = -1
-            for (i in classes.near) {
-                total = sum(neighbors.y == i)
+            for (j in classes.near) {
+                total = sum(neighbors.y == j)
                 if (total > max) {
                     max = total
-                    class = i
+                    class = j
                 }
             }
         }
@@ -43,14 +43,14 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
     confuse.mat = c()
     for (i in classes) {
         for (j in classes) {
-            num.guesses = sum(yhat[y_test == i] == y_test[y_test == i])
-            confuse.mat = c(confuse.mat, num.guesses)
+            predicts = yhat[y_test == i]
+            confuse.mat = c(confuse.mat, sum(predicts == j))
         }
     }
 
     confuse.mat = as.data.frame(matrix(confuse.mat, nrow = length(classes)))
     names(confuse.mat) = classes
-    rownames(confuse.mat) = classes
+    rownames(confuse.mat) = paste('predicted', classes)
 
     return(list('yhat' = yhat, 'accuracy' = accuracy,
             'error.rate' = 1 - accuracy, 'confusion.matrix' = confuse.mat,
@@ -61,7 +61,7 @@ kNNreg = function(train, test, y_train, y_test, k, weighted) {
     yhat = c()
     for (i in 1:nrow(test)) {
         diff = t(train) - test[i, ]
-        dist_sq = diag(diff %*% t(diff)) # vector of squared distances
+        dist_sq = diag(t(diff) %*% diff) # vector of squared distances
         order = order(dist_sq)
 
         # picks the x and y from the training set of the nearest k data points
