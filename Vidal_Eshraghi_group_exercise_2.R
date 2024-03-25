@@ -75,7 +75,7 @@ kNNreg = function(train, test, y_train, y_test, k, weighted) {
     }
 
     residuals = ytest - yhat
-    sse = as.numeric(t(residuals) % residuals)
+    sse = as.numeric(t(residuals) %*% residuals)
 
     return(list('yhat' = yhat, 'residuals' = residuals, 'SSE' = sse, 'k' = k))
 }
@@ -88,8 +88,8 @@ mykNN <- function(train, test, y_train, y_test, k = 3, weighted = TRUE){
     }
 
     if (is.factor(y_train)) {
-        return kNNclass(train, test, y_train, y_test, k, weighted)
+        return(kNNclass(train, test, y_train, y_test, k, weighted))
     } else {
-        return kNNreg(train, test, y_train, y_test, k, weighted)
+        return(kNNreg(train, test, y_train, y_test, k, weighted))
     }
 }
