@@ -7,7 +7,6 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
         order = order(dist_sq)
 
         # picks the x and y from the training set of the nearest k data points
-        neighbors.x = x_train[order,][1:k,]
         neighbors.y = y_train[order][1:k]
         neighbors.dist = sqrt(dist_sq[order][1:k])
 
@@ -16,7 +15,9 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
             max = -1
             for (i in classes.near) {
                 # applies weight function
-                total = sum(neighbors.y == i / neighbor.dist[neighbors.y == i])
+                print(length(neighbors.dist[neighbors.y == i]))
+                print(length(neighbors.y == i))
+                total = sum(as.numeric(neighbors.y == i) / neighbors.dist[neighbors.y == i])
                 if (total > max) {
                     max = total
                     class = i
@@ -38,10 +39,11 @@ kNNclass = function(train, test, y_train, y_test, k, weighted) {
     accuracy = sum(yhat == y_test) / n
 
     # calculating confusion matrix entries
-    classes = unique(y)
+    classes = unique(y_test)
+    confuse.mat = c()
     for (i in classes) {
         for (j in classes) {
-            num.guesses = sum(y_hat[y_test == i] == y_test[y_test == i])
+            num.guesses = sum(yhat[y_test == i] == y_test[y_test == i])
             confuse.mat = c(confuse.mat, num.guesses)
         }
     }
@@ -63,7 +65,6 @@ kNNreg = function(train, test, y_train, y_test, k, weighted) {
         order = order(dist_sq)
 
         # picks the x and y from the training set of the nearest k data points
-        neighbors.x = x_train[order,][1:k,]
         neighbors.y = y_train[order][1:k]
         neighbors.dist = sqrt(dist_sq[order][1:k])
 
