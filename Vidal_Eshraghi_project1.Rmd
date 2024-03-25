@@ -69,7 +69,7 @@ knitr::opts_chunk$set(echo = TRUE,
 # include=FALSE does more than echo=FALSE, it actually does: echo=FALSE, results='hide', message=FALSE, warning=FALSE, fig.show='hide'
 
 # You should set your working directory at the very beginning of your R Markdown file
-setwd("/Users/alexvidal/Desktop/CMDA_4654/")
+setwd("/Users/seth_eshraghi/Documents/vt/CMDA_4654Project_2")
 
 ```
 
@@ -208,7 +208,7 @@ myloess <- function(x, y, span = 0.5, degree = 1, show.plot = TRUE){
   # The plot that shows my LOESS function and R built in LOESS function
   thePlot <- ggplot()+
     geom_point(data = points,aes(x=x, y=y))+
-    geom_line(data = fittedData, aes(x=x, y=y)+
+    geom_line(data = fittedData, aes(x=x, y=y))+
     labs(title=paste(" LOESS Plot with", degree, "Degree Polynomial", "\n", "with Span:", span, sep = " "),
         x ="x variable", y = "y variable")
   
@@ -606,12 +606,21 @@ plot(trainData,y_train)
 ```{r}
 kNNs <-c()
 kvalues=c(1,3,5,10,20)
+sse = c()
 for(k in kvalues){
-  kNNs <- c(kNNs, mykNN(train=trainData, test = testData, y_test = y_test, y_train = y_train, k = k, weighted = TRUE))
+  kNN <- mykNN(train=trainData, test = testData, y_test = y_test, y_train = y_train, k = k, weighted = TRUE)
+  plot(y_train ~ trainData, pch = 20)
+  points(testData, y_test, pch = 20, col = 'blue')
+  points(testData, kNN$Predicted_Responses, pch = 20, col = 'red')
+  order = order(testData)
+  lines(testData[order], kNN$Predicted_Responses[order], pch = 20, col = 'red')
+  sse = c(sse, kNN$SSE)
 }
-
-kNNs
+knitr::kable(data.frame('k' = kvalues, sse))
 ```
+
+The sum of squared errors initially goes up from $k = 1$ to $k = 3$, but falls
+for every $k$ after. It seems that a larger $k$ has a better fit.
 
 ### Part b.
 ```{r}
@@ -620,11 +629,13 @@ testData <- ozone[-dt, -1]
 y_test <- ozone[-dt, 1]
 y_train <- ozone[dt, 1]
 
-kNNs <-c()
+kNN <-c()
+sse = c()
 for(k in 1:20){
-  kNNs <- c(kNNs, mykNN(train=trainData, test = testData, y_test = y_test, y_train = y_train, k = k, weighted = TRUE))
+  kNN <- mykNN(train=trainData, test = testData, y_test = y_test, y_train = y_train, k = k, weighted = TRUE)
+  sse = c(sse, kNN$SSE)
 }
-kNNs
+plot(1:20, sse, pch = 20)
 ```
 
 
